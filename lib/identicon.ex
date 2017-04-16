@@ -10,6 +10,50 @@ defmodule Identicon do
     |> pick_color
     |> build_grid
     |> filter_odd_squares
+    |> build_pixel_map
+    |> draw_image
+    |> save_image(input)
+  end
+
+  #No need to include image in the argument list as we are at the end of our pipeline
+  def draw_image(%Identicon.Image{pixel_map: pixel_map, color: color}) do
+    #Lets create the inital image
+    image = :egd.create(250, 250)
+    fill = :egd.color(color)
+
+    #Iterate over each item in pixel map
+    #This does not return a new list / transform a new object
+    Enum.each pixel_map, fn({start, stop}) ->
+      :egd.filledRectangle(image, start, stop, fill)
+    end
+
+    #returns a binary
+    :egd.render(image)
+  end
+
+  #save the image file to our hard disk
+  def save_image(image_file, filename) do
+    # binary = :erlang.term_to_binary(image_file)
+    File.write("#{ filename }.png", image_file)
+  end
+
+  def build_pixel_map(%Identicon.Image{grid: grid } = image) do
+    #Iterate over all tuples
+    #For each tuple generate x,y co-ordinates for top left + bottom right
+    #Each grid is 300x300 with each square 50x50
+    #map over each on the grid
+    
+    pixel_map = Enum.map grid, fn({_code, index}) ->
+      horizontal = rem(index, 5) * 50
+      vertical = div(index, 5) * 50
+      
+      top_left = {horizontal, vertical}
+      bottom_right  = { horizontal + 50, vertical + 50}
+      
+      {top_left, bottom_right}      
+    end
+
+    %Identicon.Image{image | pixel_map: pixel_map}
   end
 
   def hash_input(input) do
@@ -62,7 +106,6 @@ defmodule Identicon do
       |> List.flatten      #Returns a flattened list [123, 132, 124]
       |> Enum.with_index   #Returns a two tupple list with the index [{123,0}, {132,1}, [124, 1]]
 
-    grid
     %Identicon.Image{image | grid: grid}
   end
 
